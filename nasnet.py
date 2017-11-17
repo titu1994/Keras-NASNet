@@ -170,6 +170,9 @@ def NASNet(input_shape=None,
         else:
             img_input = input_tensor
 
+    assert penultimate_filters % ((2 ** nb_blocks) * 6), "`penultimate_filters` needs to be divisible " \
+                                                         "by 6 * (2^N)."
+
     filters = penultimate_filters // ((2 ** nb_blocks) * 6)
 
     x = Conv2D(stem_filters, (3, 3), strides=(2, 2), padding='valid', use_bias=False, name='stem_conv1',
