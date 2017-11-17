@@ -456,7 +456,7 @@ def NASNetCIFAR(input_shape=None,
     """
     return NASNet(input_shape,
                   penultimate_filters=768,
-                  nb_blocks=2,
+                  nb_blocks=6,
                   stem_filters=96,
                   skip_reduction=True,
                   use_auxilary_branch=use_auxilary_branch,
