@@ -31,3 +31,7 @@ from nasnet import NASNetLarge, NASNetMobile
 
 model = NASNetLarge(input_shape=(331, 331, 3), dropout=0.5)
 ```
+
+# Network Overview
+
+<img src="https://github.com/titu1994/Keras-NASNet/blob/master/images/nasnet_mobile.png?raw=true" height=100% width=100%>
