@@ -1,4 +1,4 @@
-# Keras NASNet
+# Keras Neural Architecture Search Network (NASNet)
 An implementation of "NASNet" models from the paper [Learning Transferable Architectures for Scalable Image Recognitio](https://arxiv.org/abs/1707.07012) in Keras 2.0+.
 
 Based on the models described in the [TFSlim implementation](https://github.com/tensorflow/models/tree/master/research/slim/nets/nasnet) and some modules from the [TensorNets implementation](https://github.com/taehoonlee/tensornets/blob/master/tensornets/nasnets.py)
