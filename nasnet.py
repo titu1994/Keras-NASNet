@@ -29,6 +29,8 @@ from keras.layers import GlobalAveragePooling2D
 from keras.layers import GlobalMaxPooling2D
 from keras.layers import Conv2D
 from keras.layers import SeparableConv2D
+from keras.layers import ZeroPadding2D
+from keras.layers import Cropping2D
 from keras.layers import concatenate
 from keras.layers import add
 from keras.utils.data_utils import get_file
@@ -530,7 +532,9 @@ def _adjust_block(p, ip, filters, id=None):
                 p1 = Conv2D(filters // 2, (1, 1), padding='same', use_bias=False,
                             name='adjust_conv_1_%s' % id, kernel_initializer='he_normal')(p1)
 
-                p2 = AveragePooling2D((1, 1), strides=(2, 2), padding='valid', name='adjust_avg_pool_2_%s' % id)(p)
+                p2 = ZeroPadding2D(padding=((0, 1), (0, 1)))(p)
+                p2 = Cropping2D(cropping=((1, 0), (1, 0)))(p2)
+                p2 = AveragePooling2D((1, 1), strides=(2, 2), padding='valid', name='adjust_avg_pool_2_%s' % id)(p2)
                 p2 = Conv2D(filters // 2, (1, 1), padding='same', use_bias=False,
                             name='adjust_conv_2_%s' % id, kernel_initializer='he_normal')(p2)
 
