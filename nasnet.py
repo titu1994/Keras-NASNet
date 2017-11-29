@@ -260,7 +260,7 @@ def NASNet(input_shape=None,
     return model
 
 
-def NASNetLarge(input_shape=None,
+def NASNetLarge(input_shape=(331, 331, 3),
                 dropout=0.5,
                 use_auxilary_branch=False,
                 include_top=True,
@@ -331,7 +331,7 @@ def NASNetLarge(input_shape=None,
                   default_size=331)
 
 
-def NASNetMobile(input_shape=None,
+def NASNetMobile(input_shape=(224, 224, 3),
                  dropout=0.5,
                  use_auxilary_branch=False,
                  include_top=True,
@@ -402,7 +402,7 @@ def NASNetMobile(input_shape=None,
                   default_size=224)
 
 
-def NASNetCIFAR(input_shape=None,
+def NASNetCIFAR(input_shape=(32, 32, 3),
                 dropout=0.0,
                 use_auxilary_branch=False,
                 include_top=True,
