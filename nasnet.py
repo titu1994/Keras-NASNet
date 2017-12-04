@@ -256,7 +256,8 @@ def NASNet(input_shape=None,
         model = Model(inputs, x, name='NASNet')
 
     # load weights (when available)
-    warnings.warn('Weights of NASNet models have not been ported yet for Keras.')
+    if weights is not None:
+        warnings.warn('Weights of NASNet models have not been ported yet for Keras.')
 
     if old_data_format:
         K.set_image_data_format(old_data_format)
