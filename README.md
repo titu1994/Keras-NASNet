@@ -3,7 +3,9 @@ An implementation of "NASNet" models from the paper [Learning Transferable Archi
 
 Based on the models described in the [TFSlim implementation](https://github.com/tensorflow/models/tree/master/research/slim/nets/nasnet) and some modules from the [TensorNets implementation](https://github.com/taehoonlee/tensornets/blob/master/tensornets/nasnets.py)
 
-**Note : Weights for ImageNet will be ported if possible, though it will take a lot of time. External help appreciated.**
+Weights have been ported over from the official [NASNet Tensorflow repository](https://github.com/tensorflow/models/tree/master/research/slim/nets/nasnet).
+
+Since CIFAR weights are not provided, and I don't have the resources to train such large models on CIFAR, those weights will not be provided. External help is appreciated.
 
 # Usage
 All types of NASNet models can be built. In addition, `NASNet Large - NASNet (6 @ 4032)` and `NASNet Mobile - NASNet (4 @ 1056)` are prebuilt and provided as `NASNetLarge` and `NASNetMobile`.

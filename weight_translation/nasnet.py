@@ -44,20 +44,20 @@ from keras import backend as K
 _BN_DECAY = 0.9997
 _BN_EPSILON = 1e-3
 
-NASNET_MOBILE_WEIGHT_PATH = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.0/NASNet-mobile.h5"
-NASNET_MOBILE_WEIGHT_PATH_NO_TOP = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.0/NASNet-mobile-no-top.h5"
-NASNET_MOBILE_WEIGHT_PATH_WITH_AUXULARY = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.0/NASNet-auxilary-mobile.h5"
-NASNET_MOBILE_WEIGHT_PATH_WITH_AUXULARY_NO_TOP = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.0/NASNet-auxilary-mobile-no-top.h5"
-NASNET_LARGE_WEIGHT_PATH = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.1/NASNet-large.h5"
-NASNET_LARGE_WEIGHT_PATH_NO_TOP = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.1/NASNet-large-no-top.h5"
-NASNET_LARGE_WEIGHT_PATH_WITH_AUXILARY = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.1/NASNet-auxilary-large.h5"
-NASNET_LARGE_WEIGHT_PATH_WITH_AUXILARY_NO_TOP = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.1/NASNet-auxilary-large-no-top.h5"
+# use weight_load_mobile for NASNetMobile
+#from weight_translation.weight_load_mobile import *
 
+# use weight_load_large for NASNetLarge
+from weight_translation.weight_load_large import *
+
+STEM_IDX = 0
+REDUCTION_IDX = 0
+NORMAL_IDX = 0
 
 def NASNet(input_shape=None,
            penultimate_filters=4032,
            nb_blocks=6,
-           stem_filters=96,
+           stem_filters=336,
            skip_reduction=True,
            use_auxilary_branch=False,
            filters_multiplier=2,
@@ -189,15 +189,20 @@ def NASNet(input_shape=None,
     channel_dim = 1 if K.image_data_format() == 'channels_first' else -1
     filters = penultimate_filters // 24
 
+    # load weights and set them during network creation itself
+    conv_0_weights = load_conv0()
+
     if not skip_reduction:
         x = Conv2D(stem_filters, (3, 3), strides=(2, 2), padding='valid', use_bias=False, name='stem_conv1',
-                   kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay))(img_input)
+                   kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay),
+                   weights=[conv_0_weights['w']])(img_input)
     else:
         x = Conv2D(stem_filters, (3, 3), strides=(1, 1), padding='same', use_bias=False, name='stem_conv1',
-                   kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay))(img_input)
+                   kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay),
+                   weights=[conv_0_weights['w']])(img_input)
 
     x = BatchNormalization(axis=channel_dim, momentum=_BN_DECAY, epsilon=_BN_EPSILON,
-                           name='stem_bn1')(x)
+                           name='stem_bn1', weights=conv_0_weights['bn'])(x)
 
     p = None
     if not skip_reduction:  # imagenet / mobile mode
@@ -232,10 +237,13 @@ def NASNet(input_shape=None,
 
     x = Activation('relu')(x)
 
+    head_weights = load_head()
+
     if include_top:
         x = GlobalAveragePooling2D()(x)
         x = Dropout(dropout)(x)
-        x = Dense(classes, activation='softmax', kernel_regularizer=l2(weight_decay), name='predictions')(x)
+        x = Dense(classes, activation='softmax', kernel_regularizer=l2(weight_decay), name='predictions',
+                  weights=head_weights)(x)
     else:
         if pooling == 'avg':
             x = GlobalAveragePooling2D()(x)
@@ -255,48 +263,9 @@ def NASNet(input_shape=None,
     else:
         model = Model(inputs, x, name='NASNet')
 
-    # load weights
-    if weights == 'imagenet':
-        if default_size == 224:  # mobile version
-            if include_top:
-                if use_auxilary_branch:
-                    weight_path = NASNET_MOBILE_WEIGHT_PATH_WITH_AUXULARY
-                    model_name = 'nasnet_mobile_with_aux.h5'
-                else:
-                    weight_path = NASNET_MOBILE_WEIGHT_PATH
-                    model_name = 'nasnet_mobile.h5'
-            else:
-                if use_auxilary_branch:
-                    weight_path = NASNET_MOBILE_WEIGHT_PATH_WITH_AUXULARY_NO_TOP
-                    model_name = 'nasnet_mobile_with_aux_no_top.h5'
-                else:
-                    weight_path = NASNET_MOBILE_WEIGHT_PATH_NO_TOP
-                    model_name = 'nasnet_mobile_no_top.h5'
-
-            weights_file = get_file(model_name, weight_path, cache_subdir='models')
-            model.load_weights(weights_file, by_name=True)
-
-        elif default_size == 331:  # large version
-            if include_top:
-                if use_auxilary_branch:
-                    weight_path = NASNET_LARGE_WEIGHT_PATH_WITH_AUXILARY
-                    model_name = 'nasnet_large_with_aux.h5'
-                else:
-                    weight_path = NASNET_LARGE_WEIGHT_PATH
-                    model_name = 'nasnet_large.h5'
-            else:
-                if use_auxilary_branch:
-                    weight_path = NASNET_LARGE_WEIGHT_PATH_WITH_AUXILARY_NO_TOP
-                    model_name = 'nasnet_large_with_aux_no_top.h5'
-                else:
-                    weight_path = NASNET_LARGE_WEIGHT_PATH_NO_TOP
-                    model_name = 'nasnet_large_no_top.h5'
-
-            weights_file = get_file(model_name, weight_path, cache_subdir='models')
-            model.load_weights(weights_file, by_name=True)
-
-        else:
-            raise ValueError('ImageNet weights can only be loaded on NASNetLarge or NASNetMobile')
+    # load weights (when available)
+    if weights is not None:
+        warnings.warn('Weights of NASNet models have not yet been ported to Keras')
 
     if old_data_format:
         K.set_image_data_format(old_data_format)
@@ -309,7 +278,7 @@ def NASNetLarge(input_shape=(331, 331, 3),
                 weight_decay=5e-5,
                 use_auxilary_branch=False,
                 include_top=True,
-                weights='imagenet',
+                weights=None,
                 input_tensor=None,
                 pooling=None,
                 classes=1000):
@@ -387,7 +356,7 @@ def NASNetMobile(input_shape=(224, 224, 3),
                  weight_decay=4e-5,
                  use_auxilary_branch=False,
                  include_top=True,
-                 weights='imagenet',
+                 weights=None,
                  input_tensor=None,
                  pooling=None,
                  classes=1000):
@@ -538,7 +507,7 @@ def NASNetCIFAR(input_shape=(32, 32, 3),
                   default_size=224)
 
 
-def _separable_conv_block(ip, filters, kernel_size=(3, 3), strides=(1, 1), weight_decay=5e-5, id=None):
+def _separable_conv_block(ip, filters, kernel_size=(3, 3), strides=(1, 1), weight_decay=5e-5, id=None, weights=None):
     '''Adds 2 blocks of [relu-separable conv-batchnorm]
 
     # Arguments:
@@ -558,19 +527,23 @@ def _separable_conv_block(ip, filters, kernel_size=(3, 3), strides=(1, 1), weigh
         x = Activation('relu')(ip)
         x = SeparableConv2D(filters, kernel_size, strides=strides, name='separable_conv_1_%s' % id,
                             padding='same', use_bias=False, kernel_initializer='he_normal',
-                            kernel_regularizer=l2(weight_decay))(x)
+                            kernel_regularizer=l2(weight_decay),
+                            weights=[weights['d1'], weights['p1']])(x)
         x = BatchNormalization(axis=channel_dim, momentum=_BN_DECAY, epsilon=_BN_EPSILON,
-                               name="separable_conv_1_bn_%s" % (id))(x)
+                               name="separable_conv_1_bn_%s" % (id),
+                               weights=weights['bn1'])(x)
         x = Activation('relu')(x)
         x = SeparableConv2D(filters, kernel_size, name='separable_conv_2_%s' % id,
                             padding='same', use_bias=False, kernel_initializer='he_normal',
-                            kernel_regularizer=l2(weight_decay))(x)
+                            kernel_regularizer=l2(weight_decay),
+                            weights=[weights['d2'], weights['p2']])(x)
         x = BatchNormalization(axis=channel_dim, momentum=_BN_DECAY, epsilon=_BN_EPSILON,
-                               name="separable_conv_2_bn_%s" % (id))(x)
+                               name="separable_conv_2_bn_%s" % (id),
+                               weights=weights['bn2'])(x)
     return x
 
 
-def _adjust_block(p, ip, filters, weight_decay=5e-5, id=None):
+def _adjust_block(p, ip, filters, weight_decay=5e-5, id=None, weights=None):
     '''
     Adjusts the input `p` to match the shape of the `input`
     or situations where the output number of filters needs to
@@ -599,25 +572,30 @@ def _adjust_block(p, ip, filters, weight_decay=5e-5, id=None):
 
                 p1 = AveragePooling2D((1, 1), strides=(2, 2), padding='valid', name='adjust_avg_pool_1_%s' % id)(p)
                 p1 = Conv2D(filters // 2, (1, 1), padding='same', use_bias=False, kernel_regularizer=l2(weight_decay),
-                            name='adjust_conv_1_%s' % id, kernel_initializer='he_normal')(p1)
+                            name='adjust_conv_1_%s' % id, kernel_initializer='he_normal',
+                            weights=[weights['path1_conv']])(p1)
 
                 p2 = ZeroPadding2D(padding=((0, 1), (0, 1)))(p)
                 p2 = Cropping2D(cropping=((1, 0), (1, 0)))(p2)
                 p2 = AveragePooling2D((1, 1), strides=(2, 2), padding='valid', name='adjust_avg_pool_2_%s' % id)(p2)
                 p2 = Conv2D(filters // 2, (1, 1), padding='same', use_bias=False, kernel_regularizer=l2(weight_decay),
-                            name='adjust_conv_2_%s' % id, kernel_initializer='he_normal')(p2)
+                            name='adjust_conv_2_%s' % id, kernel_initializer='he_normal',
+                            weights=[weights['path2_conv']])(p2)
 
                 p = concatenate([p1, p2], axis=channel_dim)
                 p = BatchNormalization(axis=channel_dim, momentum=_BN_DECAY, epsilon=_BN_EPSILON,
-                                       name='adjust_bn_%s' % id)(p)
+                                       name='adjust_bn_%s' % id,
+                                       weights=weights['final_bn'])(p)
 
         elif p._keras_shape[channel_dim] != filters:
             with K.name_scope('adjust_projection_block_%s' % id):
                 p = Activation('relu')(p)
                 p = Conv2D(filters, (1, 1), strides=(1, 1), padding='same', name='adjust_conv_projection_%s' % id,
-                           use_bias=False, kernel_regularizer=l2(weight_decay), kernel_initializer='he_normal')(p)
+                           use_bias=False, kernel_regularizer=l2(weight_decay), kernel_initializer='he_normal',
+                           weights=[weights['prev_conv']])(p)
                 p = BatchNormalization(axis=channel_dim, momentum=_BN_DECAY, epsilon=_BN_EPSILON,
-                                       name='adjust_bn_%s' % id)(p)
+                                       name='adjust_bn_%s' % id,
+                                       weights=weights['prev_bn'])(p)
     return p
 
 
@@ -634,26 +612,36 @@ def _normal_A(ip, p, filters, weight_decay=5e-5, id=None):
     # Returns:
         a Keras tensor
     '''
+    global NORMAL_IDX
     channel_dim = 1 if K.image_data_format() == 'channels_first' else -1
 
+    weights = load_normal_call(NORMAL_IDX)
+    NORMAL_IDX += 1
+
     with K.name_scope('normal_A_block_%s' % id):
-        p = _adjust_block(p, ip, filters, weight_decay, id)
+        p = _adjust_block(p, ip, filters, weight_decay, id, weights)
 
         h = Activation('relu')(ip)
         h = Conv2D(filters, (1, 1), strides=(1, 1), padding='same', name='normal_conv_1_%s' % id,
-                   use_bias=False, kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay))(h)
+                   use_bias=False, kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay),
+                   weights=[weights['begin_W']])(h)
         h = BatchNormalization(axis=channel_dim, momentum=_BN_DECAY, epsilon=_BN_EPSILON,
-                               name='normal_bn_1_%s' % id)(h)
+                               name='normal_bn_1_%s' % id,
+                               weights=weights['begin_bn'])(h)
 
         with K.name_scope('block_1'):
             x1_1 = _separable_conv_block(h, filters, kernel_size=(5, 5), weight_decay=weight_decay,
-                                         id='normal_left1_%s' % id)
-            x1_2 = _separable_conv_block(p, filters, weight_decay=weight_decay, id='normal_right1_%s' % id)
+                                         id='normal_left1_%s' % id,
+                                         weights=weights['left_0'])
+            x1_2 = _separable_conv_block(p, filters, weight_decay=weight_decay, id='normal_right1_%s' % id,
+                                         weights=weights['right_0'])
             x1 = add([x1_1, x1_2], name='normal_add_1_%s' % id)
 
         with K.name_scope('block_2'):
-            x2_1 = _separable_conv_block(p, filters, (5, 5), weight_decay=weight_decay, id='normal_left2_%s' % id)
-            x2_2 = _separable_conv_block(p, filters, (3, 3), weight_decay=weight_decay, id='normal_right2_%s' % id)
+            x2_1 = _separable_conv_block(p, filters, (5, 5), weight_decay=weight_decay, id='normal_left2_%s' % id,
+                                         weights=weights['left_1'])
+            x2_2 = _separable_conv_block(p, filters, (3, 3), weight_decay=weight_decay, id='normal_right2_%s' % id,
+                                         weights=weights['right_1'])
             x2 = add([x2_1, x2_2], name='normal_add_2_%s' % id)
 
         with K.name_scope('block_3'):
@@ -666,7 +654,8 @@ def _normal_A(ip, p, filters, weight_decay=5e-5, id=None):
             x4 = add([x4_1, x4_2], name='normal_add_4_%s' % id)
 
         with K.name_scope('block_5'):
-            x5 = _separable_conv_block(h, filters, weight_decay=weight_decay, id='normal_left5_%s' % id)
+            x5 = _separable_conv_block(h, filters, weight_decay=weight_decay, id='normal_left5_%s' % id,
+                                       weights=weights['left_4'])
             x5 = add([x5, h], name='normal_add_5_%s' % id)
 
         x = concatenate([p, x1, x2, x3, x4, x5], axis=channel_dim, name='normal_concat_%s' % id)
@@ -687,34 +676,49 @@ def _reduction_A(ip, p, filters, weight_decay=5e-5, id=None):
         a Keras tensor
     '''
     """"""
+    global STEM_IDX, REDUCTION_IDX
+
+    if 'stem' in id:
+        if STEM_IDX == 0:
+            weights = load_stem_0()
+        else:
+            weights = load_stem_1()
+        STEM_IDX = 1
+
+    else:
+        weights = load_reduction_call(REDUCTION_IDX)
+        REDUCTION_IDX += 1
+
     channel_dim = 1 if K.image_data_format() == 'channels_first' else -1
 
     with K.name_scope('reduction_A_block_%s' % id):
-        p = _adjust_block(p, ip, filters, weight_decay, id)
+        p = _adjust_block(p, ip, filters, weight_decay, id, weights)
 
         h = Activation('relu')(ip)
         h = Conv2D(filters, (1, 1), strides=(1, 1), padding='same', name='reduction_conv_1_%s' % id,
-                   use_bias=False, kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay))(h)
+                   use_bias=False, kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay),
+                   weights=[weights['begin_W']])(h)
         h = BatchNormalization(axis=channel_dim, momentum=_BN_DECAY, epsilon=_BN_EPSILON,
-                               name='reduction_bn_1_%s' % id)(h)
+                               name='reduction_bn_1_%s' % id,
+                               weights=weights['begin_bn'])(h)
 
         with K.name_scope('block_1'):
             x1_1 = _separable_conv_block(h, filters, (5, 5), strides=(2, 2), weight_decay=weight_decay,
-                                         id='reduction_left1_%s' % id)
+                                         id='reduction_left1_%s' % id, weights=weights['left_0'])
             x1_2 = _separable_conv_block(p, filters, (7, 7), strides=(2, 2), weight_decay=weight_decay,
-                                         id='reduction_1_%s' % id)
+                                         id='reduction_right1_%s' % id, weights=weights['right_0'])
             x1 = add([x1_1, x1_2], name='reduction_add_1_%s' % id)
 
         with K.name_scope('block_2'):
             x2_1 = MaxPooling2D((3, 3), strides=(2, 2), padding='same', name='reduction_left2_%s' % id)(h)
             x2_2 = _separable_conv_block(p, filters, (7, 7), strides=(2, 2), weight_decay=weight_decay,
-                                         id='reduction_right2_%s' % id)
+                                         id='reduction_right2_%s' % id, weights=weights['right_1'])
             x2 = add([x2_1, x2_2], name='reduction_add_2_%s' % id)
 
         with K.name_scope('block_3'):
             x3_1 = AveragePooling2D((3, 3), strides=(2, 2), padding='same', name='reduction_left3_%s' % id)(h)
             x3_2 = _separable_conv_block(p, filters, (5, 5), strides=(2, 2), weight_decay=weight_decay,
-                                         id='reduction_right3_%s' % id)
+                                         id='reduction_right3_%s' % id, weights=weights['right_2'])
             x3 = add([x3_1, x3_2], name='reduction_add3_%s' % id)
 
         with K.name_scope('block_4'):
@@ -722,7 +726,8 @@ def _reduction_A(ip, p, filters, weight_decay=5e-5, id=None):
             x4 = add([x2, x4])
 
         with K.name_scope('block_5'):
-            x5_1 = _separable_conv_block(x1, filters, (3, 3), weight_decay=weight_decay, id='reduction_left4_%s' % id)
+            x5_1 = _separable_conv_block(x1, filters, (3, 3), weight_decay=weight_decay, id='reduction_left4_%s' % id,
+                                         weights=weights['left_4'])
             x5_2 = MaxPooling2D((3, 3), strides=(2, 2), padding='same', name='reduction_right5_%s' % id)(h)
             x5 = add([x5_1, x5_2], name='reduction_add4_%s' % id)
 
@@ -745,6 +750,8 @@ def _add_auxilary_head(x, classes, weight_decay):
     # Returns
         a keras Tensor
     '''
+    weights = load_auxilary_branch()
+
     img_height = 1 if K.image_data_format() == 'channels_last' else 2
     img_width = 2 if K.image_data_format() == 'channels_last' else 3
     channel_axis = 1 if K.image_data_format() == 'channels_first' else -1
@@ -753,33 +760,30 @@ def _add_auxilary_head(x, classes, weight_decay):
         auxilary_x = Activation('relu')(x)
         auxilary_x = AveragePooling2D((5, 5), strides=(3, 3), padding='valid', name='aux_pool')(auxilary_x)
         auxilary_x = Conv2D(128, (1, 1), padding='same', use_bias=False, name='aux_conv_projection',
-                            kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay))(auxilary_x)
+                            kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay),
+                            weights=[weights['conv1']])(auxilary_x)
         auxilary_x = BatchNormalization(axis=channel_axis, momentum=_BN_DECAY, epsilon=_BN_EPSILON,
-                                        name='aux_bn_projection')(auxilary_x)
+                                        name='aux_bn_projection',
+                                        weights=weights['bn1'])(auxilary_x)
         auxilary_x = Activation('relu')(auxilary_x)
 
         auxilary_x = Conv2D(768, (auxilary_x._keras_shape[img_height], auxilary_x._keras_shape[img_width]),
                             padding='valid', use_bias=False, kernel_initializer='he_normal',
-                            kernel_regularizer=l2(weight_decay), name='aux_conv_reduction')(auxilary_x)
+                            kernel_regularizer=l2(weight_decay), name='aux_conv_reduction',
+                            weights=[weights['conv2']])(auxilary_x)
         auxilary_x = BatchNormalization(axis=channel_axis, momentum=_BN_DECAY, epsilon=_BN_EPSILON,
-                                        name='aux_bn_reduction')(auxilary_x)
+                                        name='aux_bn_reduction',
+                                        weights=weights['bn2'])(auxilary_x)
         auxilary_x = Activation('relu')(auxilary_x)
 
         auxilary_x = GlobalAveragePooling2D()(auxilary_x)
         auxilary_x = Dense(classes, activation='softmax', kernel_regularizer=l2(weight_decay),
-                           name='aux_predictions')(auxilary_x)
+                           name='aux_predictions',
+                           weights=weights['fc'])(auxilary_x)
     return auxilary_x
 
 
 if __name__ == '__main__':
-    import tensorflow as tf
-
-    sess = tf.Session()
-
-    K.set_session(sess)
-
-    model = NASNetLarge((224, 224, 3))
+    model = NASNetLarge(use_auxilary_branch=False)
     model.summary()
-
-    writer = tf.summary.FileWriter('./logs/', graph=K.get_session().graph)
-    writer.close()
+    model.save_weights('NASNet-large.h5')
