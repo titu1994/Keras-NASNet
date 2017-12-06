@@ -45,7 +45,7 @@ X_train = preprocess_input(X_train)
 X_test = preprocess_input(X_test)
 
 # For training, the auxilary branch must be used to correctly train NASNet
-model = NASNetCIFAR((img_rows, img_cols, img_channels), use_auxilary_branch=True)
+model = NASNetCIFAR((img_rows, img_cols, img_channels), use_auxiliary_branch=True)
 model.summary()
 
 optimizer = Adam(lr=1e-3, clipnorm=5)
