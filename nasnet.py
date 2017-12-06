@@ -476,7 +476,7 @@ def NASNetCIFAR(input_shape=(32, 32, 3),
     return NASNet(input_shape,
                   penultimate_filters=768,
                   nb_blocks=6,
-                  stem_filters=96,
+                  stem_filters=32,
                   skip_reduction=True,
                   use_auxilary_branch=use_auxilary_branch,
                   filters_multiplier=2,
@@ -545,7 +545,7 @@ def _adjust_block(p, ip, filters, weight_decay=5e-5, id=None):
         if p is None:
             p = ip
 
-        if p._keras_shape[img_dim] != ip._keras_shape[img_dim]:
+        elif p._keras_shape[img_dim] != ip._keras_shape[img_dim]:
             with K.name_scope('adjust_reduction_block_%s' % id):
                 p = Activation('relu', name='adjust_relu_1_%s' % id)(p)
 
