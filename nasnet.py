@@ -798,7 +798,7 @@ if __name__ == '__main__':
 
     K.set_session(sess)
 
-    model = NASNetLarge((224, 224, 3))
+    model = NASNetLarge((331, 331, 3))
     model.summary()
 
     writer = tf.summary.FileWriter('./logs/', graph=K.get_session().graph)

@@ -784,6 +784,6 @@ def _add_auxilary_head(x, classes, weight_decay):
 
 
 if __name__ == '__main__':
-    model = NASNetLarge(use_auxilary_branch=False)
+    model = NASNetMobile(use_auxilary_branch=False)
     model.summary()
-    model.save_weights('NASNet-large.h5')
+    model.save_weights('NASNet-mobile.h5')
