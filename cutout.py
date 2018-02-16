@@ -18,7 +18,7 @@ def cutout(img):
     img -= mean
 
     mask = np.ones((height, width), np.float32)
-    nb_cuts = np.random.randint(1, MAX_CUTS + 1)
+    nb_cuts = np.random.randint(0, MAX_CUTS + 1)
 
     for i in range(nb_cuts):
         y = np.random.randint(height)
