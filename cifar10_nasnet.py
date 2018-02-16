@@ -11,6 +11,7 @@ from keras.callbacks import ReduceLROnPlateau
 from keras.callbacks import CSVLogger
 from keras.optimizers import Adam
 from nasnet import NASNetCIFAR, preprocess_input
+from cutout import cutout
 import numpy as np
 
 
@@ -76,7 +77,8 @@ else:
         width_shift_range=0.1,  # randomly shift images horizontally (fraction of total width)
         height_shift_range=0.1,  # randomly shift images vertically (fraction of total height)
         horizontal_flip=False,  # randomly flip images
-        vertical_flip=False)  # randomly flip images
+        vertical_flip=False,  # randomly flip images
+        preprocessing_function=cutout)  # randomly apply cutout
 
     # Compute quantities required for featurewise normalization
     # (std, mean, and principal components if ZCA whitening is applied).
