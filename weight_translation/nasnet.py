@@ -222,13 +222,13 @@ def NASNet(input_shape=None,
     auxilary_x = None
     if not skip_reduction:  # imagenet / mobile mode
         if use_auxilary_branch:
-            auxilary_x = _add_auxilary_head(x, classes, weight_decay)
+            auxilary_x = _add_auxilary_head(x, classes, weight_decay, pooling, include_top)
 
     x, p0 = _reduction_A(x, p, filters * filters_multiplier ** 2, weight_decay, id='reduce_%d' % (2 * nb_blocks))
 
     if skip_reduction:  # CIFAR mode
         if use_auxilary_branch:
-            auxilary_x = _add_auxilary_head(x, classes, weight_decay)
+            auxilary_x = _add_auxilary_head(x, classes, weight_decay, pooling, include_top)
 
     p = p0 if not skip_reduction else p
 
@@ -735,7 +735,7 @@ def _reduction_A(ip, p, filters, weight_decay=5e-5, id=None):
         return x, ip
 
 
-def _add_auxilary_head(x, classes, weight_decay):
+def _add_auxilary_head(x, classes, weight_decay, pooling, include_top):
     '''Adds an auxilary head for training the model
 
     From section A.7 "Training of ImageNet models" of the paper, all NASNet models are
@@ -776,10 +776,16 @@ def _add_auxilary_head(x, classes, weight_decay):
                                         weights=weights['bn2'])(auxilary_x)
         auxilary_x = Activation('relu')(auxilary_x)
 
-        auxilary_x = GlobalAveragePooling2D()(auxilary_x)
-        auxilary_x = Dense(classes, activation='softmax', kernel_regularizer=l2(weight_decay),
-                           name='aux_predictions',
-                           weights=weights['fc'])(auxilary_x)
+        if include_top:
+            auxiliary_x = GlobalAveragePooling2D()(auxiliary_x)
+            auxiliary_x = Dense(classes, activation='softmax', kernel_regularizer=l2(weight_decay),
+                                name='aux_predictions')(auxiliary_x)
+        else:
+            if pooling == 'avg':
+                auxiliary_x = GlobalAveragePooling2D()(auxiliary_x)
+            elif pooling == 'max':
+                auxiliary_x = GlobalMaxPooling2D()(auxiliary_x)
+
     return auxilary_x
 
 
