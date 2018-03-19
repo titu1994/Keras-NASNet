@@ -64,7 +64,8 @@ from keras import backend as K
 _BN_DECAY = 0.9997
 _BN_EPSILON = 1e-3
 
-NASNET_MOBILE_WEIGHT_PATH = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.0/NASNet-mobile.h5"
+# NASNET_MOBILE_WEIGHT_PATH = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.0/NASNet-mobile.h5"
+NASNET_MOBILE_WEIGHT_PATH = 'https://github.com/veronikayurchuk/Keras-NASNet/releases/download/v1.0.1_veronikayurchuk/NASNet-mobile.h5'
 NASNET_MOBILE_WEIGHT_PATH_NO_TOP = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.0/NASNet-mobile-no-top.h5"
 NASNET_MOBILE_WEIGHT_PATH_WITH_AUXULARY = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.0/NASNet-auxiliary-mobile.h5"
 NASNET_MOBILE_WEIGHT_PATH_WITH_AUXULARY_NO_TOP = "https://github.com/titu1994/Keras-NASNet/releases/download/v1.0/NASNet-auxiliary-mobile-no-top.h5"
