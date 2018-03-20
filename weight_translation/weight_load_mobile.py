@@ -42,7 +42,7 @@ all_files.extend(reduction_1_fns)
 reduction_cells = [reduction_0_fns, reduction_1_fns]
 
 aux_path = 'weights/aux_*.npy'
-aux_fns = sorted(glob.glob(aux_path))
+aux_fns = glob.glob(aux_path)
 all_files.extend(aux_fns)
 
 final_dense_path = 'weights/final_layer_FC_*.npy'
@@ -328,5 +328,6 @@ def load_head():
     return [weights, bias]
 
 if __name__ == '__main__':
-    print(normal_fns[6])
+    for i, fn in enumerate(aux_fns):
+        print(i, fn)
     pass

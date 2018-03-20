@@ -15,7 +15,8 @@ if __name__ == '__main__':
 
     if tf.device('/CPU:0'):
         if type == 'large':
-            model = NASNetLarge(input_shape=(size, size, 3))
+            model = NASNetLarge(input_shape=(size, size, 3), weights=None)
+            model.load_weights('weights/NASNet-large.h5')
             print("Loaded NASNet Large")
         else:
             model = NASNetMobile(input_shape=(size, size, 3))

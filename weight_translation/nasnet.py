@@ -44,11 +44,6 @@ from keras import backend as K
 _BN_DECAY = 0.9997
 _BN_EPSILON = 1e-3
 
-# use weight_load_mobile for NASNetMobile
-#from weight_translation.weight_load_mobile import *
-
-# use weight_load_large for NASNetLarge
-from weight_translation.weight_load_large import *
 
 STEM_IDX = 0
 REDUCTION_IDX = 0
@@ -330,9 +325,13 @@ def NASNetLarge(input_shape=(331, 331, 3),
         RuntimeError: If attempting to run this model with a
             backend that does not support separable convolutions.
     """
-    global _BN_DECAY, _BN_EPSILON
+    global _BN_DECAY, _BN_EPSILON, STEM_IDX, REDUCTION_IDX, NORMAL_IDX
     _BN_DECAY = 0.9997
     _BN_EPSILON = 1e-3
+
+    STEM_IDX = 0
+    REDUCTION_IDX = 0
+    NORMAL_IDX = 0
 
     return NASNet(input_shape,
                   penultimate_filters=4032,
@@ -408,9 +407,13 @@ def NASNetMobile(input_shape=(224, 224, 3),
         RuntimeError: If attempting to run this model with a
             backend that does not support separable convolutions.
     """
-    global _BN_DECAY, _BN_EPSILON
+    global _BN_DECAY, _BN_EPSILON, STEM_IDX, REDUCTION_IDX, NORMAL_IDX
     _BN_DECAY = 0.9997
     _BN_EPSILON = 1e-3
+
+    STEM_IDX = 0
+    REDUCTION_IDX = 0
+    NORMAL_IDX = 0
 
     return NASNet(input_shape,
                   penultimate_filters=1056,
@@ -486,9 +489,13 @@ def NASNetCIFAR(input_shape=(32, 32, 3),
         RuntimeError: If attempting to run this model with a
             backend that does not support separable convolutions.
     """
-    global _BN_DECAY, _BN_EPSILON
+    global _BN_DECAY, _BN_EPSILON, STEM_IDX, REDUCTION_IDX, NORMAL_IDX
     _BN_DECAY = 0.9
     _BN_EPSILON = 1e-5
+
+    STEM_IDX = 0
+    REDUCTION_IDX = 0
+    NORMAL_IDX = 0
 
     return NASNet(input_shape,
                   penultimate_filters=768,
@@ -777,19 +784,67 @@ def _add_auxilary_head(x, classes, weight_decay, pooling, include_top):
         auxilary_x = Activation('relu')(auxilary_x)
 
         if include_top:
-            auxiliary_x = GlobalAveragePooling2D()(auxiliary_x)
-            auxiliary_x = Dense(classes, activation='softmax', kernel_regularizer=l2(weight_decay),
-                                name='aux_predictions')(auxiliary_x)
+            auxilary_x = GlobalAveragePooling2D()(auxilary_x)
+            auxilary_x = Dense(classes, activation='softmax', kernel_regularizer=l2(weight_decay),
+                                name='aux_predictions')(auxilary_x)
         else:
             if pooling == 'avg':
-                auxiliary_x = GlobalAveragePooling2D()(auxiliary_x)
+                auxilary_x = GlobalAveragePooling2D()(auxilary_x)
             elif pooling == 'max':
-                auxiliary_x = GlobalMaxPooling2D()(auxiliary_x)
+                auxilary_x = GlobalMaxPooling2D()(auxilary_x)
 
     return auxilary_x
 
 
 if __name__ == '__main__':
-    model = NASNetMobile(use_auxilary_branch=False)
+    pass
+
+    ''' NASNet Mobile models '''
+    # use weight_load_mobile for NASNetMobile
+    # from weight_translation.weight_load_mobile import *
+
+    # K.clear_session()
+    # model = NASNetMobile(use_auxilary_branch=False, include_top=True)
+    # model.summary()
+    # model.save_weights('NASNet-mobile.h5')
+
+    # K.clear_session()
+    # model = NASNetMobile(use_auxilary_branch=False, include_top=False)
+    # model.summary()
+    # model.save_weights('NASNet-mobile-no-top.h5')
+
+    # K.clear_session()
+    # model = NASNetMobile(use_auxilary_branch=True, include_top=True)
+    # model.summary()
+    # model.save_weights('NASNet-auxiliary-mobile.h5')
+    #
+    # K.clear_session()
+    # model = NASNetMobile(use_auxilary_branch=True, include_top=False)
+    # model.summary()
+    # model.save_weights('NASNet-auxiliary-mobile-no-top.h5')
+
+    ''' NASNet Large models '''
+
+    # use weight_load_large for NASNetLarge
+    from weight_translation.weight_load_large import *
+
+    K.clear_session()
+    model = NASNetLarge(use_auxilary_branch=False, include_top=True)
     model.summary()
-    model.save_weights('NASNet-mobile.h5')
+    model.save_weights('NASNet-large.h5')
+
+    K.clear_session()
+    model = NASNetLarge(use_auxilary_branch=False, include_top=False)
+    model.summary()
+    model.save_weights('NASNet-large-no-top.h5')
+
+    K.clear_session()
+    model = NASNetLarge(use_auxilary_branch=True, include_top=True)
+    model.summary()
+    model.save_weights('NASNet-auxiliary-large.h5')
+
+    K.clear_session()
+    model = NASNetLarge(use_auxilary_branch=True, include_top=False)
+    model.summary()
+    model.save_weights('NASNet-auxiliary-large-no-top.h5')
+
