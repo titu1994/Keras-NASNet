@@ -53,7 +53,8 @@ def NASNet(input_shape=None,
            penultimate_filters=4032,
            nb_blocks=6,
            stem_filters=336,
-           skip_reduction=True,
+           initial_reduction=True,
+           skip_reduction_layer_input=True,
            use_auxilary_branch=False,
            filters_multiplier=2,
            dropout=0.5,
@@ -187,7 +188,7 @@ def NASNet(input_shape=None,
     # load weights and set them during network creation itself
     conv_0_weights = load_conv0()
 
-    if not skip_reduction:
+    if initial_reduction:
         x = Conv2D(stem_filters, (3, 3), strides=(2, 2), padding='valid', use_bias=False, name='stem_conv1',
                    kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay),
                    weights=[conv_0_weights['w']])(img_input)
@@ -200,7 +201,7 @@ def NASNet(input_shape=None,
                            name='stem_bn1', weights=conv_0_weights['bn'])(x)
 
     p = None
-    if not skip_reduction:  # imagenet / mobile mode
+    if initial_reduction:  # imagenet / mobile mode
         x, p = _reduction_A(x, p, filters // (filters_multiplier ** 2), weight_decay, id='stem_1')
         x, p = _reduction_A(x, p, filters // filters_multiplier, weight_decay, id='stem_2')
 
@@ -209,23 +210,23 @@ def NASNet(input_shape=None,
 
     x, p0 = _reduction_A(x, p, filters * filters_multiplier, weight_decay, id='reduce_%d' % (nb_blocks))
 
-    p = p0 if not skip_reduction else p
+    p = p0 if not skip_reduction_layer_input else p
 
     for i in range(nb_blocks):
         x, p = _normal_A(x, p, filters * filters_multiplier, weight_decay, id='%d' % (nb_blocks + i + 1))
 
     auxilary_x = None
-    if not skip_reduction:  # imagenet / mobile mode
+    if not skip_reduction_layer_input:  # imagenet / mobile mode
         if use_auxilary_branch:
             auxilary_x = _add_auxilary_head(x, classes, weight_decay, pooling, include_top)
 
     x, p0 = _reduction_A(x, p, filters * filters_multiplier ** 2, weight_decay, id='reduce_%d' % (2 * nb_blocks))
 
-    if skip_reduction:  # CIFAR mode
+    if skip_reduction_layer_input:  # CIFAR mode
         if use_auxilary_branch:
             auxilary_x = _add_auxilary_head(x, classes, weight_decay, pooling, include_top)
 
-    p = p0 if not skip_reduction else p
+    p = p0 if not skip_reduction_layer_input else p
 
     for i in range(nb_blocks):
         x, p = _normal_A(x, p, filters * filters_multiplier ** 2, weight_decay, id='%d' % (2 * nb_blocks + i + 1))
@@ -337,7 +338,8 @@ def NASNetLarge(input_shape=(331, 331, 3),
                   penultimate_filters=4032,
                   nb_blocks=6,
                   stem_filters=96,
-                  skip_reduction=False,
+                  initial_reduction=True,
+                  skip_reduction_layer_input=True,
                   use_auxilary_branch=use_auxilary_branch,
                   filters_multiplier=2,
                   dropout=dropout,
@@ -419,7 +421,8 @@ def NASNetMobile(input_shape=(224, 224, 3),
                   penultimate_filters=1056,
                   nb_blocks=4,
                   stem_filters=32,
-                  skip_reduction=False,
+                  initial_reduction=True,
+                  skip_reduction_layer_input=False,
                   use_auxilary_branch=use_auxilary_branch,
                   filters_multiplier=2,
                   dropout=dropout,
@@ -501,7 +504,8 @@ def NASNetCIFAR(input_shape=(32, 32, 3),
                   penultimate_filters=768,
                   nb_blocks=6,
                   stem_filters=32,
-                  skip_reduction=True,
+                  initial_reduction=False,
+                  skip_reduction_layer_input=False,
                   use_auxilary_branch=use_auxilary_branch,
                   filters_multiplier=2,
                   dropout=dropout,
@@ -786,7 +790,7 @@ def _add_auxilary_head(x, classes, weight_decay, pooling, include_top):
         if include_top:
             auxilary_x = GlobalAveragePooling2D()(auxilary_x)
             auxilary_x = Dense(classes, activation='softmax', kernel_regularizer=l2(weight_decay),
-                                name='aux_predictions')(auxilary_x)
+                                name='aux_predictions', weights=weights['fc'])(auxilary_x)
         else:
             if pooling == 'avg':
                 auxilary_x = GlobalAveragePooling2D()(auxilary_x)
@@ -799,52 +803,94 @@ def _add_auxilary_head(x, classes, weight_decay, pooling, include_top):
 if __name__ == '__main__':
     pass
 
+    import tensorflow as tf
+
     ''' NASNet Mobile models '''
     # use weight_load_mobile for NASNetMobile
-    # from weight_translation.weight_load_mobile import *
+    from weight_translation.weight_load_mobile import *
 
     # K.clear_session()
-    # model = NASNetMobile(use_auxilary_branch=False, include_top=True)
-    # model.summary()
-    # model.save_weights('NASNet-mobile.h5')
-
-    # K.clear_session()
-    # model = NASNetMobile(use_auxilary_branch=False, include_top=False)
-    # model.summary()
-    # model.save_weights('NASNet-mobile-no-top.h5')
-
-    # K.clear_session()
-    # model = NASNetMobile(use_auxilary_branch=True, include_top=True)
-    # model.summary()
-    # model.save_weights('NASNet-auxiliary-mobile.h5')
+    #
+    # sess = tf.Session()
+    # K.set_session(sess)
+    #
+    # with tf.device('/cpu:0'):
+    #     model = NASNetMobile(use_auxilary_branch=False, include_top=True)
+    #     model.summary()
+    #     model.save_weights('NASNet-mobile.h5')
     #
     # K.clear_session()
-    # model = NASNetMobile(use_auxilary_branch=True, include_top=False)
-    # model.summary()
-    # model.save_weights('NASNet-auxiliary-mobile-no-top.h5')
+    #
+    # sess = tf.Session()
+    # K.set_session(sess)
+    #
+    # with tf.device('/cpu:0'):
+    #     model = NASNetMobile(use_auxilary_branch=False, include_top=False)
+    #     model.summary()
+    #     model.save_weights('NASNet-mobile-no-top.h5')
+
+    # K.clear_session()
+    #
+    # sess = tf.Session()
+    # K.set_session(sess)
+    #
+    # with tf.device('/cpu:0'):
+    #     model = NASNetMobile(use_auxilary_branch=True, include_top=True)
+    #     model.summary()
+    #     model.save_weights('NASNet-auxiliary-mobile.h5')
+
+    # K.clear_session()
+    #
+    # sess = tf.Session()
+    # K.set_session(sess)
+    #
+    # with tf.device('/cpu:0'):
+    #     model = NASNetMobile(use_auxilary_branch=True, include_top=False)
+    #     model.summary()
+    #     model.save_weights('NASNet-auxiliary-mobile-no-top.h5')
 
     ''' NASNet Large models '''
 
     # use weight_load_large for NASNetLarge
-    from weight_translation.weight_load_large import *
-
-    K.clear_session()
-    model = NASNetLarge(use_auxilary_branch=False, include_top=True)
-    model.summary()
-    model.save_weights('NASNet-large.h5')
-
-    K.clear_session()
-    model = NASNetLarge(use_auxilary_branch=False, include_top=False)
-    model.summary()
-    model.save_weights('NASNet-large-no-top.h5')
-
-    K.clear_session()
-    model = NASNetLarge(use_auxilary_branch=True, include_top=True)
-    model.summary()
-    model.save_weights('NASNet-auxiliary-large.h5')
-
-    K.clear_session()
-    model = NASNetLarge(use_auxilary_branch=True, include_top=False)
-    model.summary()
-    model.save_weights('NASNet-auxiliary-large-no-top.h5')
+    # from weight_translation.weight_load_large import *
+    #
+    # K.clear_session()
+    #
+    # sess = tf.Session()
+    # K.set_session(sess)
+    #
+    # with tf.device('/cpu:0'):
+    #     model = NASNetLarge(use_auxilary_branch=False, include_top=True)
+    #     model.summary()
+    #     model.save_weights('NASNet-large.h5')
+    #
+    # K.clear_session()
+    #
+    # sess = tf.Session()
+    # K.set_session(sess)
+    #
+    # with tf.device('/cpu:0'):
+    #     model = NASNetLarge(use_auxilary_branch=False, include_top=False)
+    #     model.summary()
+    #     model.save_weights('NASNet-large-no-top.h5')
+    #
+    # K.clear_session()
+    #
+    # sess = tf.Session()
+    # K.set_session(sess)
+    #
+    # with tf.device('/cpu:0'):
+    #     model = NASNetLarge(use_auxilary_branch=True, include_top=True)
+    #     model.summary()
+    #     model.save_weights('NASNet-auxiliary-large.h5')
+    #
+    # K.clear_session()
+    #
+    # sess = tf.Session()
+    # K.set_session(sess)
+    #
+    # with tf.device('/cpu:0'):
+    #     model = NASNetLarge(use_auxilary_branch=True, include_top=False)
+    #     model.summary()
+    #     model.save_weights('NASNet-auxiliary-large-no-top.h5')
 

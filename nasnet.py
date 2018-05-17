@@ -50,6 +50,7 @@ from keras.layers import GlobalMaxPooling2D
 from keras.layers import Conv2D
 from keras.layers import SeparableConv2D
 from keras.layers import ZeroPadding2D
+from keras.layers import Flatten
 from keras.layers import Cropping2D
 from keras.layers import concatenate
 from keras.layers import add
@@ -78,7 +79,8 @@ def NASNet(input_shape=None,
            penultimate_filters=4032,
            nb_blocks=6,
            stem_filters=96,
-           skip_reduction=True,
+           initial_reduction=True,
+           skip_reduction_layer_input=True,
            use_auxiliary_branch=False,
            filters_multiplier=2,
            dropout=0.5,
@@ -113,7 +115,9 @@ def NASNet(input_shape=None,
                 -   P is the number of penultimate filters
         stem_filters: number of filters in the initial stem block
         skip_reduction: Whether to skip the reduction step at the tail
-            end of the network. Set to `False` for CIFAR models.
+            end of the network. Set to `True` for CIFAR models.
+        skip_reduction_layer_input: Determines whether to skip the reduction layers
+            when calculating the previous layer to connect to.
         use_auxiliary_branch: Whether to use the auxiliary branch during
             training or evaluation.
         filters_multiplier: controls the width of the network.
@@ -209,7 +213,7 @@ def NASNet(input_shape=None,
     channel_dim = 1 if K.image_data_format() == 'channels_first' else -1
     filters = penultimate_filters // 24
 
-    if not skip_reduction:
+    if initial_reduction:
         x = Conv2D(stem_filters, (3, 3), strides=(2, 2), padding='valid', use_bias=False, name='stem_conv1',
                    kernel_initializer='he_normal', kernel_regularizer=l2(weight_decay))(img_input)
     else:
@@ -220,7 +224,7 @@ def NASNet(input_shape=None,
                            name='stem_bn1')(x)
 
     p = None
-    if not skip_reduction:  # imagenet / mobile mode
+    if initial_reduction:  # imagenet / mobile mode
         x, p = _reduction_A(x, p, filters // (filters_multiplier ** 2), weight_decay, id='stem_1')
         x, p = _reduction_A(x, p, filters // filters_multiplier, weight_decay, id='stem_2')
 
@@ -229,23 +233,23 @@ def NASNet(input_shape=None,
 
     x, p0 = _reduction_A(x, p, filters * filters_multiplier, weight_decay, id='reduce_%d' % (nb_blocks))
 
-    p = p0 if not skip_reduction else p
+    p = p0 if not skip_reduction_layer_input else p
 
     for i in range(nb_blocks):
         x, p = _normal_A(x, p, filters * filters_multiplier, weight_decay, id='%d' % (nb_blocks + i + 1))
 
     auxiliary_x = None
-    if not skip_reduction:  # imagenet / mobile mode
+    if not initial_reduction:  # imagenet / mobile mode
         if use_auxiliary_branch:
             auxiliary_x = _add_auxiliary_head(x, classes, weight_decay, pooling, include_top)
 
     x, p0 = _reduction_A(x, p, filters * filters_multiplier ** 2, weight_decay, id='reduce_%d' % (2 * nb_blocks))
 
-    if skip_reduction:  # CIFAR mode
+    if initial_reduction:  # CIFAR mode
         if use_auxiliary_branch:
             auxiliary_x = _add_auxiliary_head(x, classes, weight_decay, pooling, include_top)
 
-    p = p0 if not skip_reduction else p
+    p = p0 if not skip_reduction_layer_input else p
 
     for i in range(nb_blocks):
         x, p = _normal_A(x, p, filters * filters_multiplier ** 2, weight_decay, id='%d' % (2 * nb_blocks + i + 1))
@@ -294,7 +298,7 @@ def NASNet(input_shape=None,
                     model_name = 'nasnet_mobile_no_top.h5'
 
             weights_file = get_file(model_name, weight_path, cache_subdir='models')
-            model.load_weights(weights_file, by_name=True)
+            model.load_weights(weights_file)
 
         elif default_size == 331:  # large version
             if include_top:
@@ -313,7 +317,7 @@ def NASNet(input_shape=None,
                     model_name = 'nasnet_large_no_top.h5'
 
             weights_file = get_file(model_name, weight_path, cache_subdir='models')
-            model.load_weights(weights_file, by_name=True)
+            model.load_weights(weights_file)
 
         else:
             raise ValueError('ImageNet weights can only be loaded on NASNetLarge or NASNetMobile')
@@ -389,7 +393,8 @@ def NASNetLarge(input_shape=(331, 331, 3),
                   penultimate_filters=4032,
                   nb_blocks=6,
                   stem_filters=96,
-                  skip_reduction=False,
+                  initial_reduction=True,
+                  skip_reduction_layer_input=True,
                   use_auxiliary_branch=use_auxiliary_branch,
                   filters_multiplier=2,
                   dropout=dropout,
@@ -467,7 +472,8 @@ def NASNetMobile(input_shape=(224, 224, 3),
                   penultimate_filters=1056,
                   nb_blocks=4,
                   stem_filters=32,
-                  skip_reduction=False,
+                  initial_reduction=True,
+                  skip_reduction_layer_input=False,
                   use_auxiliary_branch=use_auxiliary_branch,
                   filters_multiplier=2,
                   dropout=dropout,
@@ -545,7 +551,8 @@ def NASNetCIFAR(input_shape=(32, 32, 3),
                   penultimate_filters=768,
                   nb_blocks=6,
                   stem_filters=32,
-                  skip_reduction=True,
+                  initial_reduction=False,
+                  skip_reduction_layer_input=False,
                   use_auxiliary_branch=use_auxiliary_branch,
                   filters_multiplier=2,
                   dropout=dropout,
@@ -786,7 +793,7 @@ def _add_auxiliary_head(x, classes, weight_decay, pooling, include_top):
         auxiliary_x = Activation('relu')(auxiliary_x)
 
         if include_top:
-            auxiliary_x = GlobalAveragePooling2D()(auxiliary_x)
+            auxiliary_x = Flatten()(auxiliary_x)
             auxiliary_x = Dense(classes, activation='softmax', kernel_regularizer=l2(weight_decay),
                                 name='aux_predictions')(auxiliary_x)
         else:

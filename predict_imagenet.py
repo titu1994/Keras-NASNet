@@ -13,13 +13,14 @@ type = 'large'
 if __name__ == '__main__':
     size = 331 if type == 'large' else 224
 
-    if tf.device('/CPU:0'):
+    if tf.device('/cpu:0'):
         if type == 'large':
-            model = NASNetLarge(input_shape=(size, size, 3), weights=None)
+            model = NASNetLarge(input_shape=(size, size, 3), weights=None, use_auxiliary_branch=False)
             model.load_weights('weights/NASNet-large.h5')
             print("Loaded NASNet Large")
         else:
-            model = NASNetMobile(input_shape=(size, size, 3))
+            model = NASNetMobile(input_shape=(size, size, 3), weights=None, use_auxiliary_branch=False)
+            model.load_weights('weights/NASNet-mobile.h5')
             print("Loaded NASNet Mobile")
         #model.summary()
 
@@ -32,5 +33,9 @@ if __name__ == '__main__':
 
         preds = model.predict(x, verbose=1)
 
+        # without auxiliary head
         print('Predicted:', decode_predictions(preds))
 
+        # with auxiliary head
+        #print('Predicted:', decode_predictions(preds[0]))
+        #print('Predicted:', decode_predictions(preds[1]))

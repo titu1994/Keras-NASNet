@@ -5,15 +5,15 @@ import os
 all_files = []
 
 conv0_path = 'weights/conv0_*.npy'
-conv0_fns = sorted(glob.glob(conv0_path))
+conv0_fns = (glob.glob(conv0_path))
 all_files.extend(conv0_fns)
 
 stem_0_path = 'weights/cell_stem_0_*.npy'
-stem_0_fns = sorted(glob.glob(stem_0_path))
+stem_0_fns = (glob.glob(stem_0_path))
 all_files.extend(stem_0_fns)
 
 stem_1_path = 'weights/cell_stem_1_*.npy'
-stem_1_fns = sorted(glob.glob(stem_1_path))
+stem_1_fns = (glob.glob(stem_1_path))
 all_files.extend(stem_1_fns)
 
 # alias for stems
@@ -25,17 +25,17 @@ normal_fns = {}
 NB_CELLS = 18
 for i in range(NB_CELLS):
     normal_path = normal_path_base + "%d_*.npy" % i
-    normal_fn = sorted(glob.glob(normal_path))
+    normal_fn = (glob.glob(normal_path))
     normal_fns[i] = normal_fn
 
     all_files.extend(normal_fn)
 
 reduction_0_path = 'weights/reduction_cell_0_*.npy'
-reduction_0_fns = sorted(glob.glob(reduction_0_path))
+reduction_0_fns = (glob.glob(reduction_0_path))
 all_files.extend(reduction_0_fns)
 
 reduction_1_path = 'weights/reduction_cell_1_*.npy'
-reduction_1_fns = sorted(glob.glob(reduction_1_path))
+reduction_1_fns = (glob.glob(reduction_1_path))
 all_files.extend(reduction_1_fns)
 
 # alias for reduction cells
@@ -46,10 +46,10 @@ aux_fns = glob.glob(aux_path)
 all_files.extend(aux_fns)
 
 final_dense_path = 'weights/final_layer_FC_*.npy'
-final_dense_fns = sorted(glob.glob(final_dense_path))
+final_dense_fns = (glob.glob(final_dense_path))
 all_files.extend(final_dense_fns)
 
-all_files_paths = sorted(glob.glob('weights/*.npy'))
+all_files_paths = (glob.glob('weights/*.npy'))
 total_file_count = len(all_files_paths)
 
 print('Total number of weight files : ', total_file_count)
@@ -91,8 +91,8 @@ def load_stem_0():
     for i in range(5):
         left_path = 'weights/cell_stem_%d_comb_iter_%d_left_*.npy' % (0, i)
         right_path = 'weights/cell_stem_%d_comb_iter_%d_right_*.npy' % (0, i)
-        left_fns = sorted(glob.glob(left_path))
-        right_fns = sorted(glob.glob(right_path))
+        left_fns = (glob.glob(left_path))
+        right_fns = (glob.glob(right_path))
 
         if len(left_fns) > 0:
             print("Loaded left at %d" % i)
@@ -135,8 +135,8 @@ def load_stem_1():
     for i in range(5):
         left_path = 'weights/cell_stem_%d_comb_iter_%d_left_*.npy' % (1, i)
         right_path = 'weights/cell_stem_%d_comb_iter_%d_right_*.npy' % (1, i)
-        left_fns = sorted(glob.glob(left_path))
-        right_fns = sorted(glob.glob(right_path))
+        left_fns = (glob.glob(left_path))
+        right_fns = (glob.glob(right_path))
 
         if len(left_fns) > 0:
             print("Loaded left at %d" % i)
@@ -164,7 +164,7 @@ def load_stem_1():
             stem1['right_%d' % i] = {'d1': right_d1, 'd2': right_d2, 'p1': right_p1, 'p2': right_p2,
                                      'bn1': correct_bn(right_bn_1), 'bn2': correct_bn(right_bn_2)}
 
-    final_bn = sorted(glob.glob('weights/cell_stem_1_final_path_bn_*.npy'))
+    final_bn = (glob.glob('weights/cell_stem_1_final_path_bn_*.npy'))
     final_bn = [np.load(fn) for fn in final_bn]
     path1_conv = np.load(stem_fn[-2])
     path2_conv = np.load(stem_fn[-1])
@@ -187,8 +187,8 @@ def load_normal_call(index):
     for i in range(5):
         left_path = 'weights/cell_%d_comb_iter_%d_left_*.npy' % (index, i)
         right_path = 'weights/cell_%d_comb_iter_%d_right_*.npy' % (index, i)
-        left_fns = sorted(glob.glob(left_path))
-        right_fns = sorted(glob.glob(right_path))
+        left_fns = (glob.glob(left_path))
+        right_fns = (glob.glob(right_path))
 
         if len(left_fns) > 0:
             print("Loaded left at %d" % i)
@@ -216,11 +216,11 @@ def load_normal_call(index):
             cell['right_%d' % i] = {'d1': right_d1, 'd2': right_d2, 'p1': right_p1, 'p2': right_p2,
                                      'bn1': correct_bn(right_bn_1), 'bn2': correct_bn(right_bn_2)}
 
-    final_bn = sorted(glob.glob('weights/cell_%d_final_path_bn_*.npy' % (index)))
+    final_bn = (glob.glob('weights/cell_%d_final_path_bn_*.npy' % (index)))
     if len(final_bn) > 0:
         print("Loaded final path")
         final_bn = [np.load(fn) for fn in final_bn]
-        conv_paths = sorted(glob.glob('weights/cell_%d_path*_conv_weights.npy' % (index)))
+        conv_paths = (glob.glob('weights/cell_%d_path*_conv_weights.npy' % (index)))
         path1_conv = np.load(conv_paths[0])
         path2_conv = np.load(conv_paths[1])
 
@@ -228,7 +228,7 @@ def load_normal_call(index):
         cell['path1_conv'] = path1_conv
         cell['path2_conv'] = path2_conv
 
-    prev_bn = sorted(glob.glob('weights/cell_%d_prev_bn_*.npy' % (index)))
+    prev_bn = (glob.glob('weights/cell_%d_prev_bn_*.npy' % (index)))
     if len(prev_bn) > 0:
         print("Loaded previous path")
         prev_bn = [np.load(fn) for fn in prev_bn]
@@ -251,8 +251,8 @@ def load_reduction_call(index):
     for i in range(5):
         left_path = 'weights/reduction_cell_%d_comb_iter_%d_left_*.npy' % (index, i)
         right_path = 'weights/reduction_cell_%d_comb_iter_%d_right_*.npy' % (index, i)
-        left_fns = sorted(glob.glob(left_path))
-        right_fns = sorted(glob.glob(right_path))
+        left_fns = (glob.glob(left_path))
+        right_fns = (glob.glob(right_path))
 
         if len(left_fns) > 0:
             print("Loaded left at %d" % i)
@@ -280,7 +280,7 @@ def load_reduction_call(index):
             cell['right_%d' % i] = {'d1': right_d1, 'd2': right_d2, 'p1': right_p1, 'p2': right_p2,
                                      'bn1': correct_bn(right_bn_1), 'bn2': correct_bn(right_bn_2)}
 
-    final_bn = sorted(glob.glob('weights/reduction_cell_%d_final_path_bn_*.npy' % (index)))
+    final_bn = (glob.glob('weights/reduction_cell_%d_final_path_bn_*.npy' % (index)))
     if len(final_bn) > 0:
         print("Loaded final")
         final_bn = [np.load(fn) for fn in final_bn]
@@ -293,7 +293,7 @@ def load_reduction_call(index):
         cell['path1_conv'] = path1_conv
         cell['path2_conv'] = path2_conv
 
-    prev_bn = sorted(glob.glob('weights/reduction_cell_%d_prev_bn_*.npy' % (index)))
+    prev_bn = (glob.glob('weights/reduction_cell_%d_prev_bn_*.npy' % (index)))
     if len(prev_bn) > 0:
         print("Loaded previous")
         prev_bn = [np.load(fn) for fn in prev_bn]

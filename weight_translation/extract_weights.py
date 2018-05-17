@@ -68,6 +68,11 @@ os.remove('weights/global_step.npy')
 for fn in glob.glob('weights/*_ExponentialMovingAverage.npy'):
   os.remove(fn)
 
+# Remove non EMA weights
+# for fn in glob.glob('weights/*.npy'):
+#     if 'moving' not in fn and 'Exponential' not in fn:
+#         os.remove(fn)
+
 for fn in glob.glob('weights/*_RMSProp.npy'):
   os.remove(fn)
 
